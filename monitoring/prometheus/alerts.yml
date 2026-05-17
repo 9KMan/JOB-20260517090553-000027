@@ -1,0 +1,123 @@
+groups:
+  - name: ml_platform_alerts
+    interval: 30s
+    rules:
+      - alert: MLflowServerDown
+        expr: up{job="mlflow"} == 0
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "MLflow server is down"
+          description: "MLflow tracking server has been unreachable for more than 5 minutes"
+
+      - alert: HighMLflowCPU
+        expr: rate(process_cpu_seconds_total{job="mlflow"}[5m]) > 0.8
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High CPU usage on MLflow server"
+          description: "MLflow server CPU usage is above 80% for more than 10 minutes"
+
+      - alert: MLflowDatabaseConnectionFailures
+        expr: rate(postgresql_errors_total{job="mlflow"}[5m]) > 10
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "MLflow database connection failures"
+          description: "High rate of database connection failures on MLflow server"
+
+  - name: sagemaker_alerts
+    interval: 30s
+    rules:
+      - alert: SageMakerEndpointHighLatency
+        expr: aws_sagemaker_model_latency_p99 > 100
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "SageMaker endpoint high latency"
+          description: "Model latency p99 is above 100ms for more than 5 minutes"
+
+      - alert: SageMakerEndpointErrors
+        expr: rate(aws_sagemaker_errors_sum[5m]) > 0.01
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "SageMaker endpoint error rate high"
+          description: "Error rate is above 1% for more than 5 minutes"
+
+      - alert: SageMakerInvocationsThrottling
+        expr: rate(aws_sagemaker_invocations_throttles_sum[5m]) > 0
+        for: 3m
+        labels:
+          severity: warning
+        annotations:
+          summary: "SageMaker invocations being throttled"
+          description: "Some SageMaker invocations are being throttled"
+
+  - name: spark_alerts
+    interval: 30s
+    rules:
+      - alert: SparkApplicationFailure
+        expr: spark_application_failed_tasks_total > 0
+        for: 0m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Spark application failures detected"
+          description: "Spark application has failed tasks"
+
+      - alert: SparkExecutorMemoryPressure
+        expr: spark_executor_memory_used_bytes / spark_executor_memory_total_bytes > 0.9
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Spark executor memory pressure"
+          description: "Spark executors are using more than 90% of available memory"
+
+  - name: pipeline_alerts
+    interval: 30s
+    rules:
+      - alert: AirflowDAGFailure
+        expr: airflow_dag_run_failed > 0
+        for: 0m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Airflow DAG run failed"
+          description: "An Airflow DAG run has failed"
+
+      - alert: AirflowDAGDurationAnomaly
+        expr: anomaly_detection(airflow_dag_run_duration_minutes) > 2
+        for: 30m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Airflow DAG duration anomaly"
+          description: "DAG run duration is significantly above normal"
+
+  - name: kafka_alerts
+    interval: 30s
+    rules:
+      - alert: KafkaConsumerLag
+        expr: kafka_consumer_lag_messages > 10000
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Kafka consumer lag high"
+          description: "Consumer lag is above 10,000 messages for more than 15 minutes"
+
+      - alert: KafkaBrokerDiskSpaceLow
+        expr: kafka_broker_disk_free_space_bytes < 10737418240
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Kafka broker disk space low"
+          description: "Available disk space is below 10GB on Kafka broker"

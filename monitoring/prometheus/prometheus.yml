@@ -1,0 +1,88 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ['alertmanager:9093']
+
+rule_files:
+  - '/etc/prometheus/rules/*.yml'
+
+scrape_configs:
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  - job_name: 'mlflow'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['mlflow-server:8000']
+        labels:
+          service: 'mlflow'
+          environment: 'production'
+
+  - job_name: 'airflow'
+    metrics_path: '/admin/metrics'
+    static_configs:
+      - targets: ['airflow-webserver:8080']
+        labels:
+          service: 'airflow'
+          environment: 'production'
+
+  - job_name: 'sagemaker'
+    aws_metrics:
+      - region: us-east-1
+        namespace: AWS/SageMaker
+        metric_data_queries:
+          - id: invocations
+            metric:
+              MetricName: Invocations
+          - id: latency
+            metric:
+              MetricName: ModelLatency
+              Stat: p99
+          - id: errors
+            metric:
+              MetricName: Errors
+
+  - job_name: 'emr-spark'
+    static_configs:
+      - targets: ['spark-history-server:18080']
+        labels:
+          service: 'spark-history'
+          environment: 'production'
+
+  - job_name: 'kafka'
+    static_configs:
+      - targets: ['kafka-exporter:9308']
+        labels:
+          service: 'kafka'
+          environment: 'production'
+
+  - job_name: 'flink'
+    static_configs:
+      - targets: ['flink-jobmanager:9251']
+        labels:
+          service: 'flink'
+          environment: 'production'
+
+  - job_name: 'kubernetes-nodes'
+    kubernetes_sd_configs:
+      - role: node
+        kubeconfig_file: /etc/prometheus/kubeconfig
+    relabel_configs:
+      - action: labelmap
+        regex: __meta_kubernetes_node_label_(.+)
+
+  - job_name: 'kubernetes-pods'
+    kubernetes_sd_configs:
+      - role: pod
+        kubeconfig_file: /etc/prometheus/kubeconfig
+    relabel_configs:
+      - action: labelmap
+        regex: __meta_kubernetes_pod_label_(.+)
+      - source_labels: [__meta_kubernetes_namespace]
+        action: replace
+        target_label: kubernetes_namespace
